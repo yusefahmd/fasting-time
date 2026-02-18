@@ -30,25 +30,16 @@ input {
   background: white;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+table { width: 100%; border-collapse: collapse; }
 
-td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #eee;
-}
+td { padding: 10px 14px; border-bottom: 1px solid #eee; }
 
-.highlight {
-  background: #eef6ff;
-  font-weight: bold;
-}
+.highlight { background: #eef6ff; font-weight: bold; }
 </style>
 </head>
 <body>
 <h1>Nautical Twilight Start</h1>
-<input id="city" placeholder="Enter city and press Enter" />
+<input id="city" placeholder="Detecting your location…" />
 
 <div class="table-frame">
   <table id="twilight-table"></table>
@@ -56,16 +47,18 @@ td {
 
 <script>
 let lat = 51.92;
-let lon = 4.48; // default Rotterdam-ish
+let lon = 4.48;
+let timeZone = 'Europe/Amsterdam';
 
 const table = document.getElementById('twilight-table');
+const cityInput = document.getElementById('city');
 
 function formatDate(d){
-  return d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  return d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric', timeZone});
 }
 
 function formatTime(d){
-  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', timeZone});
 }
 
 function buildTable(){
@@ -87,13 +80,20 @@ function buildTable(){
     table.appendChild(tr);
   }
 
-  // scroll so today row is centered
   setTimeout(()=>{
     const highlight=document.querySelector('.highlight');
     if(highlight){
       highlight.scrollIntoView({block:'center'});
     }
   },50);
+}
+
+async function lookupTimezone(){
+  try{
+    const tzRes = await fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lon}`);
+    const tzData = await tzRes.json();
+    if(tzData.timeZone) timeZone = tzData.timeZone;
+  }catch(e){ console.warn('Timezone lookup failed'); }
 }
 
 async function searchCity(city){
@@ -103,17 +103,47 @@ async function searchCity(city){
   if(data.length){
     lat=parseFloat(data[0].lat);
     lon=parseFloat(data[0].lon);
+    cityInput.value=data[0].display_name;
+    await lookupTimezone();
     buildTable();
   }else{
     alert('City not found');
   }
 }
 
-buildTable();
+async function detectLocation(){
+  if(!navigator.geolocation){
+    cityInput.placeholder='Enter city and press Enter';
+    buildTable();
+    return;
+  }
 
-document.getElementById('city').addEventListener('keydown',e=>{
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    lat=pos.coords.latitude;
+    lon=pos.coords.longitude;
+
+    try{
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const geoData = await geoRes.json();
+      cityInput.value = geoData.display_name || '';
+    }catch{}
+
+    await lookupTimezone();
+    buildTable();
+    cityInput.placeholder='Enter city and press Enter';
+  },()=>{
+    cityInput.placeholder='Enter city and press Enter';
+    buildTable();
+  });
+}
+
+cityInput.addEventListener('keydown',e=>{
   if(e.key==='Enter') searchCity(e.target.value);
 });
+
+// initial auto-detect
+
+detectLocation();
 </script>
 </body>
 </html>
