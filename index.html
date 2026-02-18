@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Nautical Twilight Table</title>
+<title>Astronomical Twilight Table</title>
 
-<!-- Fixed CSP: allow inline script so page works, still restrict external sources -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://nominatim.openstreetmap.org https://timeapi.io; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src https://nominatim.openstreetmap.org https://timeapi.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
 
-<!-- Removed defer so SunCalc loads before our script -->
 <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
 
 <style>
@@ -44,7 +42,7 @@ td { padding: 10px 14px; border-bottom: 1px solid #eee; }
 </style>
 </head>
 <body>
-<h1>Nautical Twilight Start</h1>
+<h1>Astronomical Twilight Start</h1>
 <input id="city" placeholder="Detecting your location…" autocomplete="off" />
 
 <div class="table-frame">
@@ -85,7 +83,7 @@ function buildTable(){
     d.setDate(today.getDate()+i);
 
     const times=SunCalc.getTimes(d,lat,lon);
-    const twilight=times.nauticalDawn;
+    const twilight=times.astronomicalDawn;
 
     const tr=document.createElement('tr');
     if(i===0) tr.classList.add('highlight');
