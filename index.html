@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nautical Twilight Table</title>
+<script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  margin: 40px auto;
+  max-width: 700px;
+  background: #fafafa;
+}
+
+h1 { text-align: center; }
+
+input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.table-frame {
+  height: 420px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: white;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.highlight {
+  background: #eef6ff;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+<h1>Nautical Twilight Start</h1>
+<input id="city" placeholder="Enter city and press Enter" />
+
+<div class="table-frame">
+  <table id="twilight-table"></table>
+</div>
+
+<script>
+let lat = 51.92;
+let lon = 4.48; // default Rotterdam-ish
+
+const table = document.getElementById('twilight-table');
+
+function formatDate(d){
+  return d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+}
+
+function formatTime(d){
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function buildTable(){
+  table.innerHTML='';
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  for(let i=-7;i<=7;i++){
+    const d=new Date(today);
+    d.setDate(today.getDate()+i);
+
+    const times=SunCalc.getTimes(d,lat,lon);
+    const twilight=times.nauticalDawn;
+
+    const tr=document.createElement('tr');
+    if(i===0) tr.classList.add('highlight');
+
+    tr.innerHTML=`<td>${formatDate(d)}</td><td>${formatTime(twilight)}</td>`;
+    table.appendChild(tr);
+  }
+
+  // scroll so today row is centered
+  setTimeout(()=>{
+    const highlight=document.querySelector('.highlight');
+    if(highlight){
+      highlight.scrollIntoView({block:'center'});
+    }
+  },50);
+}
+
+async function searchCity(city){
+  const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`;
+  const res=await fetch(url);
+  const data=await res.json();
+  if(data.length){
+    lat=parseFloat(data[0].lat);
+    lon=parseFloat(data[0].lon);
+    buildTable();
+  }else{
+    alert('City not found');
+  }
+}
+
+buildTable();
+
+document.getElementById('city').addEventListener('keydown',e=>{
+  if(e.key==='Enter') searchCity(e.target.value);
+});
+</script>
+</body>
+</html>
