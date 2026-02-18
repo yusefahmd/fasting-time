@@ -83,7 +83,7 @@ function buildTable(){
     d.setDate(today.getDate()+i);
 
     const times=SunCalc.getTimes(d,lat,lon);
-    const twilight=times.astronomicalDawn;
+    const twilight=times.nightEnd;
 
     const tr=document.createElement('tr');
     if(i===0) tr.classList.add('highlight');
