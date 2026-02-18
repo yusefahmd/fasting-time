@@ -4,7 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Nautical Twilight Table</title>
-<script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+
+<!-- Security: basic CSP to prevent injection attacks -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://nominatim.openstreetmap.org https://timeapi.io; script-src 'self' https://unpkg.com; connect-src https://nominatim.openstreetmap.org https://timeapi.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+
+<script src="https://unpkg.com/suncalc@1.9.0/suncalc.js" defer></script>
+
 <style>
 body {
   font-family: system-ui, sans-serif;
@@ -39,19 +44,28 @@ td { padding: 10px 14px; border-bottom: 1px solid #eee; }
 </head>
 <body>
 <h1>Nautical Twilight Start</h1>
-<input id="city" placeholder="Detecting your location…" />
+<input id="city" placeholder="Detecting your location…" autocomplete="off" />
 
 <div class="table-frame">
   <table id="twilight-table"></table>
 </div>
 
 <script>
+// Enforce HTTPS (important for geolocation security)
+if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+  location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+}
+
 let lat = 51.92;
 let lon = 4.48;
 let timeZone = 'Europe/Amsterdam';
 
 const table = document.getElementById('twilight-table');
 const cityInput = document.getElementById('city');
+
+function sanitizeInput(str) {
+  return str.replace(/[<>"']/g, '').trim();
+}
 
 function formatDate(d){
   return d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric', timeZone});
@@ -76,7 +90,14 @@ function buildTable(){
     const tr=document.createElement('tr');
     if(i===0) tr.classList.add('highlight');
 
-    tr.innerHTML=`<td>${formatDate(d)}</td><td>${formatTime(twilight)}</td>`;
+    const tdDate=document.createElement('td');
+    tdDate.textContent=formatDate(d);
+
+    const tdTime=document.createElement('td');
+    tdTime.textContent=formatTime(twilight);
+
+    tr.appendChild(tdDate);
+    tr.appendChild(tdTime);
     table.appendChild(tr);
   }
 
@@ -90,16 +111,20 @@ function buildTable(){
 
 async function lookupTimezone(){
   try{
-    const tzRes = await fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lon}`);
+    const tzRes = await fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lon}`, {referrerPolicy:'no-referrer'});
     const tzData = await tzRes.json();
     if(tzData.timeZone) timeZone = tzData.timeZone;
   }catch(e){ console.warn('Timezone lookup failed'); }
 }
 
 async function searchCity(city){
+  city = sanitizeInput(city);
+  if(!city) return;
+
   const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`;
-  const res=await fetch(url);
+  const res=await fetch(url,{referrerPolicy:'no-referrer'});
   const data=await res.json();
+
   if(data.length){
     lat=parseFloat(data[0].lat);
     lon=parseFloat(data[0].lon);
@@ -123,7 +148,7 @@ async function detectLocation(){
     lon=pos.coords.longitude;
 
     try{
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,{referrerPolicy:'no-referrer'});
       const geoData = await geoRes.json();
       cityInput.value = geoData.display_name || '';
     }catch{}
